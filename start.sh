@@ -141,11 +141,33 @@ fi
 if [[ "${ENABLE_JUPYTER:-1}" == "1" ]]; then
     say "Starting JupyterLab on port 8888"
     [[ -z "${JUPYTER_TOKEN:-}" ]] && info "no password set (JUPYTER_TOKEN is empty)"
-    "$PY" -m jupyter lab \
+
+    # Run Jupyter with the SYSTEM python, not the venv.
+    #
+    # Jupyter is installed into /usr/local by the base image, and its server
+    # extensions (terminals, contents) are registered relative to sys.prefix.
+    # Launching from the venv moves sys.prefix and those extensions stop being
+    # found - the Lab UI loads, but terminals and file opens return 404
+    # ("Launcher error: not found" / "File Load Error ... not found").
+    #
+    # allow_origin + allow_remote_access are needed behind RunPod's proxy.
+    # Terminals read $SHELL for which shell to spawn, and inherit Jupyter's
+    # cwd - and the base image sets
+    # WORKDIR to /workspace/runpod-slim - so start Jupyter from $WORKSPACE.
+    export SHELL=/bin/bash
+    ( cd "$WORKSPACE" && exec jupyter lab \
         --allow-root --ip=0.0.0.0 --port=8888 --no-browser \
         --ServerApp.token="${JUPYTER_TOKEN:-}" \
         --ServerApp.root_dir="$WORKSPACE" \
-        >"$WORKSPACE/jupyter.log" 2>&1 &
+        --ServerApp.allow_origin='*' \
+        --ServerApp.allow_remote_access=True \
+        >"$WORKSPACE/jupyter.log" 2>&1 ) &
+
+    # Make the ComfyUI venv selectable as a notebook kernel, so you still get at
+    # it from Jupyter even though Jupyter itself runs outside it.
+    "$PY" -m ipykernel install --name comfyui --display-name "ComfyUI (venv)" \
+        >/dev/null 2>&1 || info "venv kernel unavailable (ipykernel not installed)"
+
     info "log: $WORKSPACE/jupyter.log"
 fi
 

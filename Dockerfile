@@ -44,5 +44,8 @@ ENV COMFYUI_REF="" \
     COMFYUI_PORT=8188 \
     COMFYUI_EXTRA_ARGS=""
 
+# The base image sets WORKDIR to /workspace/runpod-slim; we want /workspace.
+WORKDIR /workspace
+
 EXPOSE 8188 8888 22
 ENTRYPOINT ["/opt/entrypoint.sh"]
