@@ -50,12 +50,24 @@ else
     info "volume pip cache is not owned by us - using the default cache location"
 fi
 
+# RunPod network volumes report a foreign uid, and git 2.35.2+ then refuses to
+# operate on the repo at all ("detected dubious ownership"). That breaks
+# `git pull`, and ComfyUI-Manager's update, which just shells out to git. The
+# ownership check protects a multi-user machine; this container has one user.
+if ! git config --global --get-all safe.directory 2>/dev/null | grep -qx '\*'; then
+    git config --global --add safe.directory '*' 2>/dev/null || true
+fi
+
 # ---------------------------------------------------------------------------
 # 1. ComfyUI - install only if the folder is not there
 # ---------------------------------------------------------------------------
 if [[ -d "$COMFY/.git" ]]; then
     say "ComfyUI found - leaving it exactly as it is"
-    info "$(git -C "$COMFY" log -1 --format='%h  %s' 2>/dev/null || echo 'local changes')"
+    if head="$(git -C "$COMFY" log -1 --format='%h  %s' 2>&1)"; then
+        info "$head"
+    else
+        info "could not read git history: $head"
+    fi
 else
     if [[ -d "$COMFY" ]]; then
         echo "ERROR: $COMFY exists but is not a git checkout. Move it aside or" >&2
