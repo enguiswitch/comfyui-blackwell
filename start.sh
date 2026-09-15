@@ -36,8 +36,19 @@ fi
 mkdir -p "$WORKSPACE"
 
 # Keep pip's downloads on the volume so rebuilding the venv is fast next time.
-export PIP_CACHE_DIR="$WORKSPACE/.cache/pip"
-mkdir -p "$PIP_CACHE_DIR"
+# Keep pip's cache on the volume so reinstalls are fast - but only if we
+# actually own it. RunPod network volumes can report a foreign uid, and pip
+# then disables the cache and prints a 4-line warning on every single call,
+# which drowns the log.
+PIP_CACHE_DIR="$WORKSPACE/.cache/pip"
+mkdir -p "$PIP_CACHE_DIR" 2>/dev/null || true
+chown -R "$(id -u):$(id -g)" "$WORKSPACE/.cache" 2>/dev/null || true
+if [[ -O "$PIP_CACHE_DIR" && -w "$PIP_CACHE_DIR" ]]; then
+    export PIP_CACHE_DIR
+else
+    unset PIP_CACHE_DIR
+    info "volume pip cache is not owned by us - using the default cache location"
+fi
 
 # ---------------------------------------------------------------------------
 # 1. ComfyUI - install only if the folder is not there
