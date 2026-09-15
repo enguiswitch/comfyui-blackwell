@@ -111,21 +111,29 @@ say "GPU"
 nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader 2>/dev/null \
     | while read -r l; do info "$l"; done || info "no GPU visible"
 
-"$PY" - <<'PY' || true
+# Exit status decides whether ComfyUI is launched in CPU mode below.
+if "$PY" - <<'PY'
+import sys
 try:
     import torch
 except ImportError:
     print("    WARNING: torch is not installed in the venv")
-    raise SystemExit(0)
+    sys.exit(1)
 print(f"    torch {torch.__version__} (cuda {torch.version.cuda})")
-if torch.cuda.is_available():
-    a, b = torch.cuda.get_device_capability(0)
-    print(f"    compute sm_{a}{b}")
-    if (a, b) < (12, 0):
-        print(f"    NOTE: sm_{a}{b} is not a Blackwell card.")
-else:
-    print("    WARNING: torch cannot see a GPU")
+if not torch.cuda.is_available():
+    print("    no CUDA device visible")
+    sys.exit(1)
+a, b = torch.cuda.get_device_capability(0)
+print(f"    compute sm_{a}{b}")
+if (a, b) < (12, 0):
+    print(f"    NOTE: sm_{a}{b} is not a Blackwell card.")
+sys.exit(0)
 PY
+then
+    HAS_GPU=1
+else
+    HAS_GPU=0
+fi
 
 # ---------------------------------------------------------------------------
 # 5. SSH + JupyterLab
@@ -176,15 +184,15 @@ fi
 # ---------------------------------------------------------------------------
 ARGS=(--listen 0.0.0.0 --port "${COMFYUI_PORT:-8188}")
 
-# Only add the flag if this ComfyUI version actually has it (0.32+), otherwise
-# it would refuse to start.
-if [[ "${USE_CK_ATTENTION:-1}" == "1" ]]; then
-    if grep -q -- "use-ck-attention" "$COMFY/comfy/cli_args.py" 2>/dev/null; then
-        ARGS+=(--use-ck-attention)
-    else
-        info "this ComfyUI version has no Comfy Kitchen attention - skipping the flag"
-    fi
+# No GPU - e.g. a cheap CPU pod for tweaking workflows against the same volume.
+# ComfyUI will not start without being told.
+if [[ "$HAS_GPU" == 0 ]]; then
+    ARGS+=(--cpu)
+    info "CPU mode - the UI works for building and saving workflows,"
+    info "but generation will be impractically slow or unavailable"
 fi
+
+# Attention backend is chosen per-model with the ModelAttentionBackend node.
 if [[ -n "${COMFYUI_EXTRA_ARGS:-}" ]]; then
     read -r -a extra <<< "$COMFYUI_EXTRA_ARGS"
     ARGS+=("${extra[@]}")

@@ -32,13 +32,11 @@ RUN chmod +x /opt/start.sh /opt/entrypoint.sh
 # INSTALL_REQS       auto   = only when the venv is newly created (default)
 #                    always = every boot (use after you update ComfyUI yourself)
 #                    never  = never
-# USE_CK_ATTENTION   1 = fast Comfy Kitchen attention (default). 0 = off.
 # ENABLE_JUPYTER     1 = JupyterLab on port 8888 (default)
 # JUPYTER_TOKEN      password for JupyterLab. Empty = no password.
 # COMFYUI_EXTRA_ARGS anything extra to pass to ComfyUI
 ENV COMFYUI_REF="" \
     INSTALL_REQS=auto \
-    USE_CK_ATTENTION=1 \
     ENABLE_JUPYTER=1 \
     JUPYTER_TOKEN="" \
     COMFYUI_PORT=8188 \

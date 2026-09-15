@@ -110,9 +110,9 @@ Set these as environment variables in the RunPod template.
 |---|---|---|
 | `COMFYUI_REF` | *(empty)* | Which ComfyUI version to install the **first** time. Empty = latest. Or `v0.33.1`, or a commit. |
 | `INSTALL_REQS` | `auto` | `auto` = only for a new venv. `always` = every boot, use after you update ComfyUI yourself. `never` = never. |
-| `USE_CK_ATTENTION` | `1` | Comfy Kitchen attention, a fast built-in alternative to SageAttention. `0` turns it off. |
 | `ENABLE_JUPYTER` | `1` | JupyterLab on 8888 |
 | `JUPYTER_TOKEN` | *(empty)* | Password for JupyterLab. Empty = no password. |
+| *(automatic)* | — | No GPU detected (e.g. a CPU pod) adds `--cpu` by itself |
 | `COMFYUI_EXTRA_ARGS` | *(empty)* | Extra ComfyUI flags, e.g. `--fast` |
 | `PUBLIC_KEY` | *(empty)* | Your SSH public key, if you want SSH |
 
